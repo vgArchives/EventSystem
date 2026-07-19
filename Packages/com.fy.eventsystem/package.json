@@ -1,0 +1,22 @@
+{
+  "name": "com.fy.eventsystem",
+  "displayName": "Fy Event System",
+  "version": "0.1.0",
+  "unity": "6000.0",
+  "description": "Strongly-typed, allocation-light event service built on top of the Fy Service Locator.",
+  "author": {
+    "name": "vgArchives"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "com.fy.services": "0.1.0",
+    "com.fy.scriptablesettings": "0.1.0"
+  },
+  "samples": [
+    {
+      "displayName": "Event Examples",
+      "description": "Examples covering event definitions, listeners, and invocation.",
+      "path": "Samples~/Examples"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+    "name": "Fy.EventSystem",
+    "rootNamespace": "Fy.EventSystem",
+    "references": [
+        "Fy.Services",
+        "Fy.ScriptableSettings"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
