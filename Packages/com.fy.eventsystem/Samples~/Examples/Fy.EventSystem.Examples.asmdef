@@ -1,0 +1,17 @@
+{
+    "name": "Fy.EventSystem.Examples",
+    "rootNamespace": "Fy.EventSystem.Examples",
+    "references": [
+        "Fy.EventSystem",
+        "Fy.Services"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
