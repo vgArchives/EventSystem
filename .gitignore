@@ -112,3 +112,6 @@ CLAUDE.local.md
 
 # JetBrains Rider / IntelliJ
 .idea/
+
+# Package samples imported via Package Manager (copies of Packages/*/Samples~)
+/[Aa]ssets/[Ss]amples/
