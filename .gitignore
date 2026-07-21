@@ -115,3 +115,4 @@ CLAUDE.local.md
 
 # Package samples imported via Package Manager (copies of Packages/*/Samples~)
 /[Aa]ssets/[Ss]amples/
+/[Aa]ssets/[Ss]amples.meta
