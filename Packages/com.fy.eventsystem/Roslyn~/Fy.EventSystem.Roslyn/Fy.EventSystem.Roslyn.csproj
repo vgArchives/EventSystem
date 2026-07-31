@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <LangVersion>latest</LangVersion>
+        <AssemblyName>Fy.EventSystem.Roslyn</AssemblyName>
+        <RootNamespace>Fy.EventSystem.Roslyn</RootNamespace>
+        <Deterministic>true</Deterministic>
+        <PlatformTarget>AnyCPU</PlatformTarget>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Version matches the one Unity 6000.5 uses for its own source generators. ExcludeAssets="runtime"
+             keeps Roslyn's assemblies out of the output: shipping them alongside the generator breaks the compiler. -->
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.0.1" ExcludeAssets="runtime" PrivateAssets="all" />
+    </ItemGroup>
+
+    <!-- Unity ignores this folder, so building alone changes nothing: the DLL only takes effect once it sits next
+         to the runtime scripts. Copying after every build stops an edit here from silently leaving a stale
+         generator in the package, whichever IDE or configuration built it. -->
+    <Target Name="CopyToPackage" AfterTargets="Build">
+        <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll"
+              DestinationFolder="$(MSBuildProjectDirectory)\..\..\Fy.EventSystem\" />
+    </Target>
+
+</Project>
