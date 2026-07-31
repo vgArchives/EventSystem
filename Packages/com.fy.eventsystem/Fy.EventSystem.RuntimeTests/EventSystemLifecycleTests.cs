@@ -108,9 +108,11 @@ namespace Fy.EventSystem.RuntimeTests
             Assert.That(calls, Is.Zero);
         }
 
-        /// <summary>Dispose removes every listener of every type, invalidates handles and empties the static buckets.</summary>
+        /// <summary>
+        /// Dispose removes every listener of every type and invalidates the handles that referenced them.
+        /// </summary>
         [Test]
-        public void Dispose_ClearsAllListeners_AndStaticBuckets()
+        public void Dispose_ClearsAllListeners()
         {
             int irrelevantCalls = 0;
 
@@ -123,10 +125,11 @@ namespace Fy.EventSystem.RuntimeTests
             });
 
             EventHandle first = _eventSystem.AddListener((ref EventContext context, in LifecycleTestEvent e) => { });
-            EventHandle second = _eventSystem.AddListener((ref EventContext context, in SecondaryLifecycleEvent e) => { });
+            EventHandle second = _eventSystem.AddListener(
+                (ref EventContext context, in SecondaryLifecycleEvent e) => { });
 
-            Assert.That(EventCallbacks<LifecycleTestEvent>.Value.Count, Is.EqualTo(1));
-            Assert.That(EventCallbacks<SecondaryLifecycleEvent>.Value.Count, Is.EqualTo(1));
+            Assert.That(_eventSystem.GetListenerCount<LifecycleTestEvent>(), Is.EqualTo(1));
+            Assert.That(_eventSystem.GetListenerCount<SecondaryLifecycleEvent>(), Is.EqualTo(1));
 
             _eventSystem.Dispose();
 
@@ -134,9 +137,6 @@ namespace Fy.EventSystem.RuntimeTests
             Assert.That(_eventSystem.GetListenerCount<SecondaryLifecycleEvent>(), Is.Zero);
             Assert.That(first.IsValid, Is.False);
             Assert.That(second.IsValid, Is.False);
-            Assert.That(EventCallbacks<LifecycleTestEvent>.Value.Count, Is.Zero,
-                "Dispose must flush the static bucket or listeners leak across play sessions.");
-            Assert.That(EventCallbacks<SecondaryLifecycleEvent>.Value.Count, Is.Zero);
             Assert.That(irrelevantCalls, Is.EqualTo(1));
         }
 

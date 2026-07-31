@@ -21,9 +21,8 @@ namespace Fy.EventSystem
     /// <see cref="EventSettings.ValidateInvocationTargets"/>); listeners whose Unity target was destroyed are
     /// pruned automatically instead of invoked.</item>
     /// </list>
-    /// Listener delegates live in static per-event-type buckets shared across instances. <see cref="Dispose"/>
-    /// flushes every registered handle out of those buckets — the service locator calls it on play-mode exit,
-    /// which is what keeps listeners from leaking across play sessions even with domain reload disabled.
+    /// Listener delegates live inside this instance's <see cref="Event{TEvent}"/> containers, so two services
+    /// never share listener state and dropping a service drops its listeners with it.
     /// </remarks>
     [PreloadService]
     public sealed class EventSystem : IEventService
@@ -42,8 +41,7 @@ namespace Fy.EventSystem
             }
 
             EventHandle handle = new(this, typeof(TEvent));
-            EventCallbacks<TEvent>.Value.Add(handle, eventHandler);
-            GetOrCreateEvent<TEvent>().Add(in handle);
+            GetOrCreateEvent<TEvent>().Add(in handle, eventHandler);
 
             return handle;
         }
@@ -52,33 +50,33 @@ namespace Fy.EventSystem
         public bool RemoveListener(in EventHandle eventHandle)
         {
             return eventHandle.Type != null
-                && _events.TryGetValue(eventHandle.Type, out Event e)
-                && e.RemoveListener(in eventHandle);
+                && _events.TryGetValue(eventHandle.Type, out Event registeredEvent)
+                && registeredEvent.RemoveListener(in eventHandle);
         }
 
         /// <inheritdoc/>
         public bool RemoveAllListeners<TEvent>()
             where TEvent : struct, IEvent
         {
-            return _events.TryGetValue(typeof(TEvent), out Event e) && e.RemoveAllListeners();
+            return _events.TryGetValue(typeof(TEvent), out Event registeredEvent)
+                && registeredEvent.RemoveAllListeners();
         }
 
         /// <inheritdoc/>
         public bool Invoke<TEvent>(object eventSender, in TEvent eventData)
             where TEvent : struct, IEvent
         {
-            if (!_events.TryGetValue(typeof(TEvent), out Event e))
+            if (!_events.TryGetValue(typeof(TEvent), out Event untypedEvent))
             {
                 return false;
             }
 
-            bool hasSettings = TryGetSettings(out EventSettings settings);
-            bool logRecursiveInvocationWarning = !hasSettings || settings.LogRecursiveInvocationWarning;
-            bool validateInvocationTargets = !hasSettings || settings.ValidateInvocationTargets;
+            Event<TEvent> typedEvent = (Event<TEvent>)untypedEvent;
 
-            if (e.IsInvoking)
+            if (typedEvent.IsInvoking)
             {
-                if (logRecursiveInvocationWarning)
+                if (!TryGetSettings(out EventSettings recursionSettings)
+                 || recursionSettings.LogRecursiveInvocationWarning)
                 {
                     Debug.LogWarning($"{typeof(TEvent)} is already being invoked! " +
                                      $"Skipping its invocation to avoid a stack overflow.");
@@ -87,45 +85,48 @@ namespace Fy.EventSystem
                 return false;
             }
 
-            int listenerCount = e.ListenerCount;
+            int listenerCount = typedEvent.ListenerCount;
 
             if (listenerCount == 0)
             {
                 return false;
             }
 
-            EventContext context = new(this, eventSender, typeof(TEvent));
+            bool validateInvocationTargets = !TryGetSettings(out EventSettings settings)
+                                          || settings.ValidateInvocationTargets;
 
-            using (new Event.InvokeScope(e))
+            EventContext context = new(this, eventSender, typeof(TEvent));
+            Event<TEvent>.Listener listener = default;
+
+            using (new Event.InvokeScope(typedEvent))
             {
                 try
                 {
                     for (int i = 0; i < listenerCount; i++)
                     {
-                        context.CurrentHandle = e[i];
+                        listener = typedEvent[i];
+                        context.CurrentHandle = listener.Handle;
 
-                        if (e.IsRemoving(in context.CurrentHandle))
+                        if (typedEvent.IsRemoving(in listener.Handle))
                         {
                             continue;
                         }
 
-                        EventContextHandler<TEvent> listener = EventCallbacks<TEvent>.Value[context.CurrentHandle];
-
-                        if (validateInvocationTargets && !IsListenerAlive(listener))
+                        if (validateInvocationTargets && !listener.IsAlive)
                         {
-                            e.RemoveListener(in context.CurrentHandle);
+                            typedEvent.RemoveListener(in listener.Handle);
 
                             continue;
                         }
 
-                        listener.Invoke(ref context, in eventData);
+                        listener.Callback.Invoke(ref context, in eventData);
                     }
                 }
                 catch (Exception exception)
                 {
-                    Delegate listener = EventCallbacks<TEvent>.Value[context.CurrentHandle];
+                    Delegate faultedListener = listener.Callback;
                     Debug.LogError($"An exception occurred while invoking {typeof(TEvent)} for " +
-                                   $"{listener.Target}.{listener.Method.Name}!", eventSender as Object);
+                                   $"{faultedListener.Target}.{faultedListener.Method.Name}!", eventSender as Object);
                     Debug.LogException(exception);
                 }
             }
@@ -137,8 +138,8 @@ namespace Fy.EventSystem
         public bool HasListener(in EventHandle eventHandle)
         {
             return eventHandle.Type != null
-                && _events.TryGetValue(eventHandle.Type, out Event e)
-                && e.HasListener(in eventHandle);
+                && _events.TryGetValue(eventHandle.Type, out Event registeredEvent)
+                && registeredEvent.HasListener(in eventHandle);
         }
 
         /// <inheritdoc/>
@@ -151,7 +152,7 @@ namespace Fy.EventSystem
         /// <inheritdoc/>
         public int GetListenerCount(Type eventType)
         {
-            return _events.TryGetValue(eventType, out Event e) ? e.ListenerCount : 0;
+            return _events.TryGetValue(eventType, out Event registeredEvent) ? registeredEvent.ListenerCount : 0;
         }
 
         /// <inheritdoc/>
@@ -164,7 +165,7 @@ namespace Fy.EventSystem
         /// <inheritdoc/>
         public bool IsInvoking(Type eventType)
         {
-            return _events.TryGetValue(eventType, out Event e) && e.IsInvoking;
+            return _events.TryGetValue(eventType, out Event registeredEvent) && registeredEvent.IsInvoking;
         }
 
         /// <inheritdoc/>
@@ -178,57 +179,43 @@ namespace Fy.EventSystem
         public void RemoveRelevancyListener<TEvent>(EventRelevancyChangedHandler handler)
             where TEvent : struct, IEvent
         {
-            if (_events.TryGetValue(typeof(TEvent), out Event e))
+            if (_events.TryGetValue(typeof(TEvent), out Event registeredEvent))
             {
-                e.OnRelevancyChanged -= handler;
+                registeredEvent.OnRelevancyChanged -= handler;
             }
         }
 
         /// <summary>
-        /// Removes every listener of every event type. The service locator calls this on play-mode exit, flushing
-        /// the static per-event-type buckets so no listener leaks into the next play session.
+        /// Removes every listener of every event type. The service locator calls this on play-mode exit, so a
+        /// listener never survives into the next play session even with domain reload disabled.
         /// </summary>
         public void Dispose()
         {
-            foreach (Event e in _events.Values)
+            foreach (Event registeredEvent in _events.Values)
             {
-                e.RemoveAllListeners();
+                registeredEvent.RemoveAllListeners();
             }
 
             _events.Clear();
         }
 
-        private Event GetOrCreateEvent<TEvent>()
+        private Event<TEvent> GetOrCreateEvent<TEvent>()
             where TEvent : struct, IEvent
         {
-            if (!_events.TryGetValue(typeof(TEvent), out Event e))
+            if (_events.TryGetValue(typeof(TEvent), out Event registeredEvent))
             {
-                e = Event.Create<TEvent>(this);
-                _events.Add(typeof(TEvent), e);
+                return (Event<TEvent>)registeredEvent;
             }
 
-            return e;
+            Event<TEvent> typedEvent = new(this);
+            _events.Add(typeof(TEvent), typedEvent);
+
+            return typedEvent;
         }
 
         private static bool TryGetSettings(out EventSettings settings)
         {
             return ScriptableSettingsRegistry.TryGet(out settings);
-        }
-
-        // A destroyed MonoBehaviour target is not C# null, so it must be checked as a Unity object.
-        private static bool IsListenerAlive(Delegate listener)
-        {
-            if (listener.Method.IsStatic)
-            {
-                return true;
-            }
-
-            if (listener.Target is Object unityObject)
-            {
-                return unityObject != null;
-            }
-
-            return listener.Target != null;
         }
     }
 }
