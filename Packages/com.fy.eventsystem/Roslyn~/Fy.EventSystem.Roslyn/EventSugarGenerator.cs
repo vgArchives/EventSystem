@@ -18,8 +18,10 @@ namespace Fy.EventSystem.Roslyn
     public sealed class EventSugarGenerator : IIncrementalGenerator
     {
         private const string EventInterfaceFullName = "Fy.EventSystem.IEvent";
-        private const string ServiceExpression =
-            "global::Fy.Services.ServiceLocator.GetChecked<global::Fy.EventSystem.IEventService>()";
+        // Calls the static forwarders rather than the service itself: IEventService derives from Fy.Services.IService,
+        // so an expression typed as IEventService would make the consumer's assembly need its own reference to
+        // Fy.Services to compile this generated code (CS0012). EventService names Fy.EventSystem types only.
+        private const string ServiceExpression = "global::Fy.EventSystem.EventService";
 
         private const string GeneratorName = "Fy.EventSystem.Roslyn.EventSugarGenerator";
         private const string GeneratorVersion = "1.0.0.0";
