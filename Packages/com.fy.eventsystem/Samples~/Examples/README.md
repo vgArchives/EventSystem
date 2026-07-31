@@ -32,8 +32,10 @@ new PlayerScoredEvent(10, 50).Invoke(this);                    // generated
 _handle.RemoveListener();                                      // on EventHandle itself
 ```
 
-Both forward to `ServiceLocator.GetChecked<IEventService>()` — same behaviour as calling the service directly,
-just shorter. `Invoke` returns false when nobody listens, which is what the publisher logs. Two rules to know:
+Both forward to `EventService`, which resolves the service from the `ServiceLocator` on each call — same behaviour
+as calling the service directly, just shorter. Because the generated code names only `Fy.EventSystem` types, your
+assembly needs a reference to that package alone; this sample's asmdef is the proof. `Invoke` returns false when
+nobody listens, which is what the publisher logs. Two rules to know:
 
 - **Forget `partial` and you get compiler warning `FYEVT001`** instead of silently missing methods.
 - **Nested and generic event types get no generated API.** They still work perfectly through the normal

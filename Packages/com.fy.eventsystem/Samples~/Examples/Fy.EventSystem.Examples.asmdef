@@ -2,8 +2,7 @@
     "name": "Fy.EventSystem.Examples",
     "rootNamespace": "Fy.EventSystem.Examples",
     "references": [
-        "Fy.EventSystem",
-        "Fy.Services"
+        "Fy.EventSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
