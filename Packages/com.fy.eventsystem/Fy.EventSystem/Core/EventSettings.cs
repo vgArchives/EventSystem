@@ -2,8 +2,6 @@ using UnityEngine;
 
 namespace Fy.EventSystem
 {
-    // Inside a Fy.* namespace the simple name "ScriptableSettings" resolves to the Fy.ScriptableSettings
-    // namespace, shadowing the class — this scoped alias restores the class.
     using ScriptableSettings = Fy.ScriptableSettings.ScriptableSettings;
 
     /// <summary>

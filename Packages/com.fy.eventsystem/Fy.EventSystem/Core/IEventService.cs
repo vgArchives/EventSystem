@@ -39,7 +39,9 @@ namespace Fy.EventSystem
         /// <summary>
         /// Invokes <typeparamref name="TEvent"/> on every registered listener.
         /// </summary>
-        /// <param name="eventSender">The object requesting the invocation, exposed as <see cref="EventContext.Sender"/>.</param>
+        /// <param name="eventSender">
+        /// The object requesting the invocation, exposed as <see cref="EventContext.Sender"/>.
+        /// </param>
         /// <param name="eventData">The event data, passed by readonly reference to each listener.</param>
         /// <returns>True if a broadcast ran; false when nobody listens or the type is already being invoked.</returns>
         bool Invoke<TEvent>(object eventSender, in TEvent eventData)

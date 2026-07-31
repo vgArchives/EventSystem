@@ -60,7 +60,9 @@ namespace Fy.EventSystem.RuntimeTests
             }
         }
 
-        /// <summary>A listener that removes itself still runs this broadcast; the removal lands right after it.</summary>
+        /// <summary>
+        /// A listener that removes itself still runs this broadcast; the removal lands right after it.
+        /// </summary>
         [Test]
         public void ListenerRemovingItself_RunsThisBroadcast_ThenIsRemoved()
         {
@@ -135,7 +137,9 @@ namespace Fy.EventSystem.RuntimeTests
             Assert.That(addedListenerCalls, Is.EqualTo(1));
         }
 
-        /// <summary>RemoveAllListeners during a broadcast defers: later listeners are skipped, then all are removed.</summary>
+        /// <summary>
+        /// RemoveAllListeners during a broadcast defers: later listeners are skipped, then all are removed.
+        /// </summary>
         [Test]
         public void RemoveAllListeners_DuringBroadcast_DefersUntilBroadcastEnds()
         {
@@ -245,9 +249,6 @@ namespace Fy.EventSystem.RuntimeTests
             Assert.That(_eventSystem.GetListenerCount<BroadcastTestEvent>(), Is.EqualTo(1));
         }
 
-        // The registry is a soft singleton, so when the project already has an EventSettings registered (e.g. a
-        // preloaded asset) a test-created instance would be ignored. Mutate the registered one and restore it on
-        // teardown; only create a temporary instance (self-registering through OnEnable) when none exists.
         private void ApplySettings(bool logRecursiveInvocationWarning, bool validateInvocationTargets)
         {
             if (ScriptableSettingsRegistry.TryGet(out EventSettings registered))
@@ -264,7 +265,6 @@ namespace Fy.EventSystem.RuntimeTests
             SetSettingsFields(_createdSettings, logRecursiveInvocationWarning, validateInvocationTargets);
         }
 
-        // The private serialized fields are set via reflection because tests must not widen the public API.
         private static void SetSettingsFields(EventSettings settings, bool logRecursiveInvocationWarning,
             bool validateInvocationTargets)
         {
