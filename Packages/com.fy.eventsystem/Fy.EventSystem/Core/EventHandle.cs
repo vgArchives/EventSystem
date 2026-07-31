@@ -1,4 +1,5 @@
 using System;
+using Fy.Services;
 
 namespace Fy.EventSystem
 {
@@ -42,6 +43,15 @@ namespace Fy.EventSystem
         /// that generated it.
         /// </summary>
         public bool IsValid => Guid != Guid.Empty && Service != null && Service.HasListener(in this);
+
+        /// <summary>
+        /// Removes the listener this handle refers to, through the service that generated it.
+        /// </summary>
+        /// <returns>True if the listener was removed or scheduled for removal.</returns>
+        public bool RemoveListener()
+        {
+            return Service.IsValid() && Service.RemoveListener(in this);
+        }
 
         public static bool operator ==(EventHandle left, EventHandle right)
         {

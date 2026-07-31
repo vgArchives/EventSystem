@@ -7,7 +7,9 @@ using UnityEngine.TestTools;
 
 namespace Fy.EventSystem.RuntimeTests
 {
-    /// <summary>Verifies the core add/invoke/remove API: data delivery, context correctness, handles and counts.</summary>
+    /// <summary>
+    /// Verifies the core add/invoke/remove API: data delivery, context correctness, handles and counts.
+    /// </summary>
     [TestFixture]
     [TestOf(typeof(EventSystem))]
     public sealed class EventSystemCoreTests
@@ -103,7 +105,8 @@ namespace Fy.EventSystem.RuntimeTests
         public void RemoveListener_LiveHandle_ReturnsTrue_AndListenerStopsReceiving()
         {
             int callCount = 0;
-            EventHandle handle = _eventSystem.AddListener((ref EventContext context, in CoreTestEvent e) => callCount++);
+            EventHandle handle = _eventSystem.AddListener(
+                (ref EventContext context, in CoreTestEvent e) => callCount++);
 
             bool removed = _eventSystem.RemoveListener(in handle);
             _eventSystem.Invoke(this, new CoreTestEvent(1));
@@ -145,7 +148,85 @@ namespace Fy.EventSystem.RuntimeTests
             otherSystem.Dispose();
         }
 
-        /// <summary>IsValid follows the listener lifetime: false by default, true while registered, false after removal.</summary>
+        /// <summary>The handle removes its own listener through the service that generated it.</summary>
+        [Test]
+        public void EventHandle_RemoveListener_RemovesThroughOwningService()
+        {
+            int callCount = 0;
+            EventHandle handle = _eventSystem.AddListener(
+                (ref EventContext context, in CoreTestEvent e) => callCount++);
+
+            bool removed = handle.RemoveListener();
+            _eventSystem.Invoke(this, new CoreTestEvent(1));
+
+            Assert.That(removed, Is.True);
+            Assert.That(callCount, Is.Zero);
+            Assert.That(handle.IsValid, Is.False);
+        }
+
+        /// <summary>Removing twice through the handle fails the second time.</summary>
+        [Test]
+        public void EventHandle_RemoveListener_OnAlreadyRemoved_ReturnsFalse()
+        {
+            EventHandle handle = _eventSystem.AddListener((ref EventContext context, in CoreTestEvent e) => { });
+
+            handle.RemoveListener();
+
+            Assert.That(handle.RemoveListener(), Is.False);
+        }
+
+        /// <summary>A default handle has no service to remove from and reports false instead of throwing.</summary>
+        [Test]
+        public void EventHandle_RemoveListener_OnDefaultHandle_ReturnsFalse()
+        {
+            EventHandle handle = default;
+
+            Assert.That(handle.RemoveListener(), Is.False);
+        }
+
+        /// <summary>A tracked list removes every listener it holds and empties itself.</summary>
+        [Test]
+        public void RemoveListenersAndClear_RemovesEveryListener_AndEmptiesTheList()
+        {
+            var handles = new List<EventHandle>
+            {
+                _eventSystem.AddListener((ref EventContext context, in CoreTestEvent e) => { }),
+                _eventSystem.AddListener((ref EventContext context, in CoreTestEvent e) => { })
+            };
+
+            bool removedAny = handles.RemoveListenersAndClear();
+
+            Assert.That(removedAny, Is.True);
+            Assert.That(handles, Is.Empty);
+            Assert.That(_eventSystem.GetListenerCount<CoreTestEvent>(), Is.Zero);
+        }
+
+        /// <summary>A handle removed beforehand reports nothing removed, but the list is still emptied.</summary>
+        [Test]
+        public void RemoveListenersAndClear_WithAlreadyRemovedHandle_StillEmptiesTheList()
+        {
+            EventHandle handle = _eventSystem.AddListener((ref EventContext context, in CoreTestEvent e) => { });
+            var handles = new List<EventHandle> { handle };
+
+            handle.RemoveListener();
+            bool removedAny = handles.RemoveListenersAndClear();
+
+            Assert.That(removedAny, Is.False);
+            Assert.That(handles, Is.Empty);
+        }
+
+        /// <summary>An empty list is a no-op.</summary>
+        [Test]
+        public void RemoveListenersAndClear_OnEmptyList_ReturnsFalse()
+        {
+            var handles = new List<EventHandle>();
+
+            Assert.That(handles.RemoveListenersAndClear(), Is.False);
+        }
+
+        /// <summary>
+        /// IsValid follows the listener lifetime: false by default, true while registered, false after removal.
+        /// </summary>
         [Test]
         public void EventHandle_IsValid_TracksListenerLifetime()
         {
