@@ -116,3 +116,10 @@ CLAUDE.local.md
 # Package samples imported via Package Manager (copies of Packages/*/Samples~)
 /[Aa]ssets/[Ss]amples/
 /[Aa]ssets/[Ss]amples.meta
+
+# Roslyn generator build output (the built DLL is committed into the package instead)
+/[Pp]ackages/**/[Rr]oslyn~/**/bin/
+/[Pp]ackages/**/[Rr]oslyn~/**/obj/
+
+# The generator's own csproj is hand-written source, not a Unity-generated project file
+!/[Pp]ackages/**/[Rr]oslyn~/**/*.csproj
