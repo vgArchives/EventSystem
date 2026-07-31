@@ -7,7 +7,7 @@ Minimal working example of the Fy Event System: defining an event, publishing it
 | File | Shows |
 |------|-------|
 | `PlayerScoredEvent.cs` | Defining an event — a `readonly struct` implementing `IEvent`. |
-| `ScorePublisher.cs` | Publishing — resolving `IEventService` from the `ServiceLocator` and calling `Invoke`. |
+| `ScorePublisher.cs` | Publishing — calling the generated `Invoke` from an on-screen button. |
 | `ScoreListener.cs` | Listening — `AddListener` on enable, reacting in a handler, `RemoveListener` on disable. |
 
 ## How to run
@@ -20,6 +20,24 @@ Minimal working example of the Fy Event System: defining an event, publishing it
 
 No manual service registration is needed — the `ServiceAutoLoader` from Fy.Services discovers and
 registers the `EventSystem` automatically.
+
+## The generated call-site API
+
+Declaring an event `partial` lets the package's source generator add two methods to it, so you never write the
+service lookup by hand:
+
+```csharp
+_handle = PlayerScoredEvent.AddListener(HandlePlayerScored);   // generated
+new PlayerScoredEvent(10, 50).Invoke(this);                    // generated
+_handle.RemoveListener();                                      // on EventHandle itself
+```
+
+Both forward to `ServiceLocator.GetChecked<IEventService>()` — same behaviour as calling the service directly,
+just shorter. `Invoke` returns false when nobody listens, which is what the publisher logs. Two rules to know:
+
+- **Forget `partial` and you get compiler warning `FYEVT001`** instead of silently missing methods.
+- **Nested and generic event types get no generated API.** They still work perfectly through the normal
+  `IEventService` methods; if you mark such a type `partial`, warning `FYEVT002` explains why nothing appeared.
 
 ## Things worth copying into real code
 
